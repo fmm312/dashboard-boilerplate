@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
   Container, 
   Content, 
@@ -9,7 +9,60 @@ import ContentHeader from '../../components/ContentHeader';
 import SelectInput from '../../components/SelectInput';
 import HistoryFinanceCard from '../../components/HistoryFinanceCard';
 
-const List: React.FC = () => {
+import gains from '../../repositories/gains';
+import expenses from '../../repositories/expenses';
+
+import formatCurrency from '../../utils/formatCurrency';
+import formatDate from '../../utils/formatDate';
+
+interface IRouteParams {
+  match: {
+    params: {
+      type: string;
+    }
+  }
+}
+
+interface IData {
+  id: string;
+  description: string;
+  amountFormatted: string;
+  frequency: string;
+  dateFormatted: string;
+  tagColor: string; 
+}
+
+const List: React.FC<IRouteParams> = ({ match }) => {
+  const [data, setData] = useState<IData[]>([]);
+
+  const { type } = match.params;
+
+  const title = useMemo(() => {
+    return type === 'entry-balance' ? 'Entradas' : 'Saídas'
+  }, [type]);
+
+  const lineColor = useMemo(() => {
+    return type === 'entry-balance' ? '#f7931b' : '#e44c4e'
+  }, [type]);
+
+  const listData = useMemo(() => {
+    return type === 'entry-balance' ? gains : expenses;
+  }, [type]);
+
+  useEffect(() => {
+    const response = listData.map(item => {
+      return {
+        id: String(Math.random() * data.length),
+        description: item.description,
+        amountFormatted: formatCurrency(Number(item.amount)),
+        frequency: item.frequency,
+        dateFormatted: formatDate(item.date),
+        tagColor: item.frequency === 'recorrente' ? '#4e41f0' : '#e44c4e', 
+      }
+    });
+    setData(response);
+  }, []);
+
   const months = [
     { value: 7, label: 'Julho' },
     { value: 8, label: 'Agosto' },
@@ -24,7 +77,7 @@ const List: React.FC = () => {
 
   return (
     <Container>
-      <ContentHeader title="Entradas" lineColor="#e44c4e">
+      <ContentHeader title={title} lineColor={lineColor}>
         <SelectInput options={months} />
         <SelectInput options={years} />
       </ContentHeader>
@@ -46,12 +99,17 @@ const List: React.FC = () => {
       </Filter>
 
       <Content>
-        <HistoryFinanceCard
-          tagColor="#e44c4e"
-          title="Conta de Luz"
-          subtitle="27/07/2020"
-          amount="R$ 120,00"
-        />
+        {
+          data.map(item => (
+            <HistoryFinanceCard
+              key={item.id}
+              tagColor={item.tagColor}
+              title={item.description}
+              subtitle={item.dateFormatted}
+              amount={item.amountFormatted}
+            />
+          ))  
+        }
       </Content>
     </Container>
   );
